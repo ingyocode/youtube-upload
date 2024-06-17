@@ -55,7 +55,7 @@ https://developers.google.com/api-client-library/python/guide/aaa_client_secrets
 VALID_PRIVACY_STATUSES = ("public", "private", "unlisted")
 
 def get_authenticated_service(args):
-    with open('token.json', 'r') as token_file:
+    with open(args.tokenFile, 'r') as token_file:
         token_data = json.load(token_file)
     credentials = Credentials(
         token_data['token'],
@@ -128,6 +128,7 @@ def resumable_upload(insert_request):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Upload video to YouTube')
     parser.add_argument("--file", required=True, help="Video file to upload")
+    parser.add_argument("--tokenFile", required=True, help="token file")
     parser.add_argument("--title", help="Video title", default="Test Title")
     parser.add_argument("--description", help="Video description", default="Test Description")
     parser.add_argument("--category", default="22", help="Numeric video category. See https://developers.google.com/youtube/v3/docs/videoCategories/list")

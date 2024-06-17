@@ -1,10 +1,12 @@
-1. create `client_secrets.json` file for downloading OAuth 2.0 Client
-2. exec `auth.py` for creating `token.json`
+1. create file for downloading OAuth 2.0 Client
+2. exec `auth.py` for creating `token.json`.
+   inputName=${OAuthClientSecretsFile}, outputName=${tokenFileName}
 3. now, you can upload by executing `upload_video.py` with file and params
 
 available options
 
 - file=${filePath}
+- tokenFile=${tokenFile}
 - title=${youtube video title}
 - description=${youtube video description}
 - keywords=${youtube video keywords}
