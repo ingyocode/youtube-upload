@@ -5,13 +5,14 @@ import time
 import http.client as httplib
 import httplib2
 import argparse
+import paramiko
 import json
 
+from dotenv import load_dotenv
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaFileUpload
 from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import InstalledAppFlow
 
 # Explicitly tell the underlying HTTP transport library not to retry, since
 # we are handling retry logic ourselves.
@@ -54,6 +55,22 @@ https://developers.google.com/api-client-library/python/guide/aaa_client_secrets
 
 VALID_PRIVACY_STATUSES = ("public", "private", "unlisted")
 
+def download_file_sftp(hostname, port, username, filePath):
+    try:
+        pkey=paramiko.RSAKey.from_private_key(open('shorts-generator-keypair.pem'))
+        transport = paramiko.Transport((hostname, port))
+        transport.connect(username=username, pkey=pkey)
+
+        sftp = paramiko.SFTPClient.from_transport(transport)
+
+        sftp.get(filePath, filePath)
+
+        sftp.close()
+        transport.close()
+    except Exception as e:
+        print(f"Failed to download file: {e}")
+        exit(1)
+
 def get_authenticated_service(args):
     with open(args.tokenFile, 'r') as token_file:
         token_data = json.load(token_file)
@@ -68,7 +85,7 @@ def get_authenticated_service(args):
     
     return build(YOUTUBE_API_SERVICE_NAME, YOUTUBE_API_VERSION, credentials=credentials)
 
-def initialize_upload(youtube, options):
+def initialize_upload(youtube,file, options):
     tags = None
     if options.keywords:
         tags = options.keywords.split(",")
@@ -88,7 +105,7 @@ def initialize_upload(youtube, options):
     insert_request = youtube.videos().insert(
         part=",".join(body.keys()),
         body=body,
-        media_body=MediaFileUpload(options.file, chunksize=-1, resumable=True)
+        media_body=MediaFileUpload(file, chunksize=-1, resumable=True)
     )
 
     resumable_upload(insert_request)
@@ -127,7 +144,6 @@ def resumable_upload(insert_request):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Upload video to YouTube')
-    parser.add_argument("--file", required=True, help="Video file to upload")
     parser.add_argument("--tokenFile", required=True, help="token file")
     parser.add_argument("--title", help="Video title", default="Test Title")
     parser.add_argument("--description", help="Video description", default="Test Description")
@@ -137,11 +153,17 @@ if __name__ == '__main__':
     parser.add_argument("--noauth_local_webserver", action='store_true', help="Do not use a local webserver for authentication")
     args = parser.parse_args()
 
-    if not os.path.exists(args.file):
-        exit("Please specify a valid file using the --file= parameter.")
+    # get file
+    load_dotenv()
+    download_file_sftp(
+        os.environ.get('FTP_HOST_NAME'),
+        int(os.environ.get('FTP_PORT')),
+        os.environ.get('FTP_USER'),
+        os.environ.get('FILE_NAME')
+    )
 
     youtube = get_authenticated_service(args)
     try:
-        initialize_upload(youtube, args)
+        initialize_upload(youtube, os.environ.get('FILE_NAME'), args)
     except HttpError as e:
         print("An HTTP error %d occurred:\n%s" % (e.resp.status, e.content))

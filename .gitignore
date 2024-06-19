@@ -1,2 +1,6 @@
+.env
+
 client_secrets.json
 token.json
+shorts-generator-keypair.pem
+result.mp4
